@@ -136,8 +136,10 @@ class DownloadQueueWorker(QRunnable):
             # ydl_opts_download["format_selector"] = "best"  # wrong key?
             
             if self.task.output_format.lower() == "mp4":
+                ydl_opts_download["final_ext"] = "mp4"
                 ydl_opts_download["merge_output_format"] = "mp4"
             else:
+                ydl_opts_download["final_ext"] = self.task.output_format
                 ydl_opts_download["merge_output_format"] = self.task.output_format
 
             ydl_opts_download["postprocessors"] = [{

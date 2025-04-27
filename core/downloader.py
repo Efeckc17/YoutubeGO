@@ -98,7 +98,7 @@ class DownloadQueueWorker(QRunnable):
 
         if self.task.audio_only:
             ydl_opts_download["final_ext"] = "mp3"
-            ydl_opts_download["format"] = "ba/b"
+            ydl_opts_download["format"] = "ba[acodec^=mp3]/ba/b"
             ydl_opts_download["postprocessors"] = [{
                 "key": "FFmpegExtractAudio",
                 "nopostoverwrites": False,
@@ -107,36 +107,33 @@ class DownloadQueueWorker(QRunnable):
             }]
         else:
             if self.task.resolution == "144p":
-                format_str = "(bestvideo[height=144]/bestvideo[height<=144]/best[height<=144])+bestaudio/best"
+                res_str = "144"
             elif self.task.resolution == "240p":
-                format_str = "(bestvideo[height=240]/bestvideo[height<=240]/best[height<=240])+bestaudio/best"
+                res_str = "240"
             elif self.task.resolution == "360p":
-                format_str = "(bestvideo[height=360]/bestvideo[height<=360]/best[height<=360])+bestaudio/best"
+                res_str = "360"
             elif self.task.resolution == "480p":
-                format_str = "(bestvideo[height=480]/bestvideo[height<=480]/best[height<=480])+bestaudio/best"
+                res_str = "480"
             elif self.task.resolution == "720p":
-                format_str = "(bestvideo[height=720]/bestvideo[height<=720]/best[height<=720])+bestaudio/best"
+                res_str = "720"
             elif self.task.resolution == "1080p":
-                format_str = "(bestvideo[height=1080]/bestvideo[height<=1080]/best[height<=1080])+bestaudio/best"
+                res_str = "1080"
             elif self.task.resolution == "1440p":
-                format_str = "(bestvideo[height=1440]/bestvideo[height<=1440]/best[height<=1440])+bestaudio/best"
+                res_str = "1440"
             elif self.task.resolution == "2160p":
-                format_str = "(bestvideo[height=2160]/bestvideo[height<=2160]/best[height<=2160])+bestaudio/best"
+                res_str = "2160"
             elif self.task.resolution == "4320p":
-                format_str = "(bestvideo[height=4320]/bestvideo[height<=4320]/best[height<=4320])+bestaudio/best"
+                res_str = "4320"
             else:
-                format_str = "bestvideo+bestaudio/best"
+                res_str = self.task.resolution[:-1]
 
-            if self.task.audio_only:
-                format_str = "bestaudio/best"
-
-            ydl_opts_download["format"] = format_str
-            ydl_opts_download["format_sort"] = ["res", "ext:mp4:m4a", "size", "br", "asr"]
-            ydl_opts_download["prefer_free_formats"] = False
+            # ydl_opts_download["format"] = "bv*+ba/b"  # by default
+            ydl_opts_download["format_sort"] = [f"res:{res_str}", "ext:mp4:m4a"]  # quality, res, fps, hdr:12, source, vcodec, channels, acodec, lang, proto
+            # ydl_opts_download["prefer_free_formats"] = False  # by default
             ydl_opts_download["retries"] = 10
             ydl_opts_download["fragment_retries"] = 10
-            ydl_opts_download["retry_sleep_functions"] = lambda retries: 5
-            ydl_opts_download["format_selector"] = "best"
+            # ydl_opts_download["retry_sleep_functions"] = lambda retries: 5  # wrong value?
+            # ydl_opts_download["format_selector"] = "best"  # wrong key?
             
             if self.task.output_format.lower() == "mp4":
                 ydl_opts_download["merge_output_format"] = "mp4"

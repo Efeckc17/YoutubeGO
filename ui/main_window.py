@@ -98,13 +98,35 @@ class MainWindow(QMainWindow):
         self.tray_icon.hide()
         QApplication.quit()
     def check_ffmpeg(self):
+        
+        self.append_log(f"Current PATH: {os.environ.get('PATH', '')}")
+        
+        
         path = shutil.which("ffmpeg")
+        self.append_log(f"FFmpeg found in PATH: {path}")
+        
+        
+        if not path and platform.system() == "Darwin":
+            common_paths = [
+                "/usr/local/bin/ffmpeg",
+                "/opt/homebrew/bin/ffmpeg",
+                os.path.expanduser("~/homebrew/bin/ffmpeg")
+            ]
+            for brew_path in common_paths:
+                self.append_log(f"Checking path: {brew_path}")
+                if os.path.exists(brew_path):
+                    path = brew_path
+                    self.append_log(f"Found FFmpeg at: {brew_path}")
+                    break
+        
         if path:
             self.ffmpeg_found = True
             self.ffmpeg_path = path
+            self.append_log(f"FFmpeg successfully found at: {path}")
         else:
             self.ffmpeg_found = False
             self.ffmpeg_path = ""
+            self.append_log("FFmpeg not found in any location")
     def init_ui(self):
         
         menu_bar = self.menuBar()

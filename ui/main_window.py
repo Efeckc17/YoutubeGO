@@ -39,7 +39,6 @@ class MainWindow(QMainWindow):
         self.ffmpeg_label = QLabel()
         self.log_dock_visible = True
         self.show_logs_btn = AnimatedButton("Logs")
-        self.check_ffmpeg()
         self.user_profile = UserProfile()
         self.thread_pool = QThreadPool()
         self.active_workers = []
@@ -51,6 +50,7 @@ class MainWindow(QMainWindow):
         self.info_signal.connect(self.update_queue_info)
         self.current_theme = self.user_profile.get_theme()  
         self.init_ui()
+        self.check_ffmpeg()
         self.apply_current_theme()  
         if not self.user_profile.is_profile_complete():
             self.prompt_user_profile()

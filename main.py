@@ -26,10 +26,14 @@ def set_platform_specific_settings():
             print(f"Failed to set Windows-specific settings: {e}")
 
 def cleanup_shared_memory(shared_mem):
-    if shared_mem and shared_mem.isAttached():
-        shared_mem.detach()
-    if shared_mem and shared_mem.isAttached():
-        shared_mem.forceDetach()
+    if shared_mem:
+        try:
+            if shared_mem.isAttached():
+                if not shared_mem.detach():
+                    # Only force detach if normal detach fails
+                    shared_mem.forceDetach()
+        except Exception as e:
+            print(f"Error during shared memory cleanup: {e}")
 
 def create_shared_memory():
     if sys.platform.startswith("win"):

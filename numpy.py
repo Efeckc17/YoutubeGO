@@ -1,0 +1,1 @@
+# Minimal numpy stub for tests that only import numpy.

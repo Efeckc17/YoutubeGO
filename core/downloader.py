@@ -87,10 +87,13 @@ class DownloadQueueWorker(QRunnable):
 
     def _get_base_options(self):
         geo_country = "US"
+        use_geo_bypass = True
         if self.user_profile:
             geo_country = self.user_profile.get_geo_bypass_country()
+            if geo_country == "NONE":
+                use_geo_bypass = False
         
-        return {
+        options = {
             "cookiefile": self.cookie_file,
             "ignoreerrors": True,
             "quiet": False,
@@ -98,10 +101,14 @@ class DownloadQueueWorker(QRunnable):
             "logger": self.logger,
             "socket_timeout": 10,
             "updatetime": False,
-            "geo_bypass": True,
-            "geo_bypass_country": geo_country,
             "force_ipv4": True
         }
+        
+        if use_geo_bypass:
+            options["geo_bypass"] = True
+            options["geo_bypass_country"] = geo_country
+        
+        return options
 
     def _get_format_string(self):
         resolutions = {

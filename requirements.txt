@@ -1,5 +1,5 @@
 PySide6>=6.6.1
-yt-dlp>=2025.9.23
+yt-dlp>=2025.10.22
 requests>=2.32.3
 psutil>=7.0.0
 rich>=13.9.4

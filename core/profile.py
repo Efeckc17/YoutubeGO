@@ -171,6 +171,7 @@ class UserProfile:
 
     def get_available_geo_bypass_countries(self):
         return {
+            "NONE": "Don't Use",
             "US": "United States",
             "RU": "Russia",
             "DE": "Germany", 

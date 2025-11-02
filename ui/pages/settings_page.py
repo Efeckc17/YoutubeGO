@@ -228,6 +228,7 @@ class SettingsPage(QWidget):
         self.geo_country_combo.currentIndexChanged.connect(self.geo_country_changed)
         self.geo_country_combo.setToolTip(
             "Geographic bypass country:\n"
+            "• Don't Use - Disable geo-bypass (direct connection)\n"
             "• US - United States (default, most content)\n"
             "• RU - Russia (bypass EU restrictions)\n"
             "• DE - Germany (EU region access)\n"

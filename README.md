@@ -1,3 +1,4 @@
+Since I've completely abandoned the software, the project will not continue. Developers can fork the project and continue it. 
 
 # YoutubeGO 5.0 
 

@@ -1,4 +1,4 @@
-Since I've completely abandoned the software, the project will not continue. Developers can fork the project and continue it. 
+I sold my computer so I could eat until I found a job. Online gambling addiction also negatively affected me during this process. I just started to solve a problem that has been going on for 4 months. The project won't be developed for a while; if there are no setbacks, I'll buy a new computer within a month and continue with the software. I can dedicate a little less time to this project, I have new ideas in mind :)
 
 # YoutubeGO 5.0 
 

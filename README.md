@@ -13,6 +13,17 @@
   [![FFmpeg](https://img.shields.io/badge/External-FFmpeg-007808?style=for-the-badge&logo=ffmpeg&logoColor=white)](https://ffmpeg.org/)
 </div>
 
+## Payments
+
+If you're building projects in regions where services like PayPal or Stripe are restricted, I built a separate solution:
+
+**PayCow** — accept payments using ERC-20 (TRC-20 soon), without relying on traditional platforms.
+
+https://paycow.net
+
+ https://github.com/Efeckc17/Paycow-Introduction
+
+ 
 ## 📋 Table of Contents
 - [Features](#-key-features)
 - [Installation](https://github.com/Efeckc17/YoutubeGO/releases)

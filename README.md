@@ -17,12 +17,9 @@
 
 If you're building projects in regions where services like PayPal or Stripe are restricted, I built a separate solution:
 
-**PayCow** — accept payments using ERC-20 (TRC-20 soon), without relying on traditional platforms.
+**PayCow** — accept payments using ERC-20/ TRC-20 , without relying on traditional platforms.
 
 https://paycow.net
-
- https://github.com/Efeckc17/Paycow-Introduction
-
  
 ## 📋 Table of Contents
 - [Features](#-key-features)

@@ -13,3 +13,4 @@ user_profile.json
 youtube_cookies.txt
 history.json
 .coverage
+.DS_Store

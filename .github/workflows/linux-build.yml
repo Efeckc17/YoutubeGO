@@ -14,70 +14,195 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v5
         with:
           python-version: '3.13'
+          cache: 'pip'
 
       - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            libxcb-cursor0 \
+            libxcb-image0 \
             libxcb-keysyms1 \
             libxcb-render-util0 \
-            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
             libxcb-xinerama0 \
-            libxcb-image0 \
             libxcb-xkb1 \
             libxcb-shape0 \
-            libxcb-icccm4 \
+            libxcb-sync1 \
+            libxcb-xfixes0 \
+            libxcb-randr0 \
+            libxcb-render0 \
+            libxcb-shm0 \
+            libxcb1 \
+            libx11-xcb1 \
+            libxkbcommon0 \
+            libxkbcommon-x11-0 \
+            libsm6 \
+            libice6 \
+            libgl1 \
+            libegl1 \
+            libfuse2 \
+            binutils \
+            file \
             appstream \
-            libfuse2
+            xvfb
 
       - name: Install Python dependencies
         run: |
+          python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install pyinstaller
 
-      - name: Build Linux App
+      - name: Build application with PyInstaller
         run: |
-          pyinstaller --noconfirm --onefile --windowed --name YoutubeGo \
+          pyinstaller --noconfirm --onedir --windowed --name YoutubeGo \
             --add-data "assets:assets" \
             --add-data "ui/themes:ui/themes" \
             main.py
 
+      - name: Assemble AppDir and bundle dependencies
+        run: |
           mkdir -p AppDir/usr/bin
+          mkdir -p AppDir/usr/lib
           mkdir -p AppDir/usr/share/applications
           mkdir -p AppDir/usr/share/icons/hicolor/256x256/apps
 
-          cp dist/YoutubeGo AppDir/usr/bin/YoutubeGo
+          cp -r dist/YoutubeGo/* AppDir/usr/bin/
+          chmod +x AppDir/usr/bin/YoutubeGo
+
           cp assets/app.png AppDir/usr/share/icons/hicolor/256x256/apps/YoutubeGo.png
           cp assets/app.png AppDir/YoutubeGo.png
+          ln -sf YoutubeGo.png AppDir/.DirIcon
 
-          echo "[Desktop Entry]" > AppDir/YoutubeGo.desktop
-          echo "Name=YoutubeGo" >> AppDir/YoutubeGo.desktop
-          echo "Exec=YoutubeGo" >> AppDir/YoutubeGo.desktop
-          echo "Icon=YoutubeGo" >> AppDir/YoutubeGo.desktop
-          echo "Type=Application" >> AppDir/YoutubeGo.desktop
-          echo "Categories=AudioVideo;Video;" >> AppDir/YoutubeGo.desktop
-          echo "Comment=YouTube video downloader" >> AppDir/YoutubeGo.desktop
+          printf '[Desktop Entry]\nType=Application\nName=YoutubeGo\nExec=YoutubeGo\nIcon=YoutubeGo\nCategories=AudioVideo;Video;\nComment=YouTube video downloader\nTerminal=false\nStartupNotify=true\n' > AppDir/YoutubeGo.desktop
+          cp AppDir/YoutubeGo.desktop AppDir/usr/share/applications/YoutubeGo.desktop
 
-          echo '#!/bin/sh' > AppDir/AppRun
-          echo 'exec "$APPDIR/usr/bin/YoutubeGo" "$@"' >> AppDir/AppRun
+          printf '#!/bin/sh\nset -e\nHERE="$(dirname "$(readlink -f "${0}")")"\nexport APPDIR="${HERE}"\nexport PATH="${APPDIR}/usr/bin:${PATH}"\nexport LD_LIBRARY_PATH="${APPDIR}/usr/lib:${APPDIR}/usr/lib/x86_64-linux-gnu:${APPDIR}/usr/bin/_internal:${APPDIR}/usr/bin/_internal/PySide6/Qt/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"\nexport QT_PLUGIN_PATH="${APPDIR}/usr/bin/_internal/PySide6/Qt/plugins"\nexport XDG_DATA_DIRS="${APPDIR}/usr/share:${XDG_DATA_DIRS:-/usr/local/share:/usr/share}"\nexec "${APPDIR}/usr/bin/YoutubeGo" "$@"\n' > AppDir/AppRun
           chmod +x AppDir/AppRun
+
+          TARGET_LIBS="libxcb-cursor.so.0 libxcb-image.so.0 libxcb-keysyms.so.1 libxcb-render-util.so.0 libxcb-icccm.so.4 libxcb-xinerama.so.0 libxcb-xkb.so.1 libxcb-shape.so.0 libxcb-sync.so.1 libxcb-xfixes.so.0 libxcb-randr.so.0 libxcb-render.so.0 libxcb-shm.so.0 libxcb.so.1 libX11-xcb.so.1 libxkbcommon.so.0 libxkbcommon-x11.so.0 libSM.so.6 libICE.so.6"
+
+          for lib in $TARGET_LIBS; do
+            FOUND_FILE=$(find /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu -name "$lib" 2>/dev/null | head -n 1)
+            if [ -z "$FOUND_FILE" ]; then
+              FOUND_FILE=$(ldconfig -p | grep "/$lib" | head -n 1 | awk '{print $NF}')
+            fi
+            if [ -n "$FOUND_FILE" ] && [ -f "$FOUND_FILE" ]; then
+              cp -L "$FOUND_FILE" AppDir/usr/lib/
+            else
+              echo "Required library not found: $lib"
+              exit 1
+            fi
+          done
+
+          EXCLUDE_REGEX="^(libc\.so|libm\.so|libpthread\.so|librt\.so|libdl\.so|libresolv\.so|libutil\.so|libnsl\.so|libcrypt\.so|ld-linux|libGL\.so|libGLX\.so|libEGL\.so|libGLdispatch\.so|libOpenGL\.so|libdrm\.so|libgbm\.so|libvulkan\.so|libasound\.so|libudev\.so|libX11\.so|libXext\.so|libXau\.so|libXdmcp\.so)"
+
+          CHANGED=1
+          while [ "$CHANGED" -eq 1 ]; do
+            CHANGED=0
+            for lib_file in AppDir/usr/lib/*.so*; do
+              [ -f "$lib_file" ] || continue
+              DEPS=$(ldd "$lib_file" 2>/dev/null | awk '{print $1}' | grep -E '^lib' || true)
+              for dep in $DEPS; do
+                echo "$dep" | grep -qE "$EXCLUDE_REGEX" && continue
+                if [ ! -f "AppDir/usr/lib/$dep" ]; then
+                  DEP_PATH=$(ldconfig -p | grep "/$dep " | head -n 1 | awk '{print $NF}')
+                  if [ -z "$DEP_PATH" ]; then
+                    DEP_PATH=$(find /usr/lib/x86_64-linux-gnu /lib/x86_64-linux-gnu -name "$dep" 2>/dev/null | head -n 1)
+                  fi
+                  if [ -n "$DEP_PATH" ] && [ -f "$DEP_PATH" ]; then
+                    cp -L "$DEP_PATH" AppDir/usr/lib/
+                    CHANGED=1
+                  fi
+                fi
+              done
+            done
+          done
+
+          mkdir -p AppDir/usr/bin/_internal/PySide6/Qt/lib
+          cp -P AppDir/usr/lib/*.so* AppDir/usr/bin/_internal/ || true
+          cp -P AppDir/usr/lib/*.so* AppDir/usr/bin/_internal/PySide6/Qt/lib/ || true
+
+      - name: Verify dependencies in AppDir
+        run: |
+          test -f AppDir/usr/lib/libxcb-cursor.so.0 || { echo "libxcb-cursor.so.0 is missing in AppDir/usr/lib"; exit 1; }
+          export LD_LIBRARY_PATH="$PWD/AppDir/usr/lib:$PWD/AppDir/usr/bin/_internal:$PWD/AppDir/usr/bin/_internal/PySide6/Qt/lib"
+          MISSING_PLUGIN_DEPS=$(ldd AppDir/usr/bin/_internal/PySide6/Qt/plugins/platforms/libqxcb.so | grep "not found" || true)
+          if [ -n "$MISSING_PLUGIN_DEPS" ]; then
+            echo "Unresolved dependencies in libqxcb.so:"
+            echo "$MISSING_PLUGIN_DEPS"
+            exit 1
+          fi
+          MISSING_BIN_DEPS=$(ldd AppDir/usr/bin/YoutubeGo | grep "not found" || true)
+          if [ -n "$MISSING_BIN_DEPS" ]; then
+            echo "Unresolved dependencies in YoutubeGo binary:"
+            echo "$MISSING_BIN_DEPS"
+            exit 1
+          fi
 
       - name: Create AppImage
         run: |
-          curl -L https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage -o appimagetool
+          curl -sLo appimagetool https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
           chmod +x appimagetool
-          ./appimagetool AppDir
+          ./appimagetool --appimage-extract
           mkdir -p dist
-          mv YoutubeGo-x86_64.AppImage dist/
+          ARCH=x86_64 ./squashfs-root/AppRun AppDir dist/YoutubeGo-x86_64.AppImage
+          chmod +x dist/YoutubeGo-x86_64.AppImage
+          rm -rf squashfs-root
+
+      - name: Verify AppImage integrity and extraction
+        run: |
+          test -s dist/YoutubeGo-x86_64.AppImage || { echo "AppImage artifact was not created"; exit 1; }
+          ./dist/YoutubeGo-x86_64.AppImage --appimage-extract
+          test -f squashfs-root/AppRun || { echo "AppRun not found in AppImage"; exit 1; }
+          test -x squashfs-root/AppRun || { echo "AppRun is not executable in AppImage"; exit 1; }
+          test -f squashfs-root/usr/lib/libxcb-cursor.so.0 || { echo "libxcb-cursor.so.0 missing in extracted AppImage"; exit 1; }
+          test -f squashfs-root/usr/bin/YoutubeGo || { echo "YoutubeGo binary missing in extracted AppImage"; exit 1; }
+          test -f squashfs-root/usr/bin/_internal/PySide6/Qt/plugins/platforms/libqxcb.so || { echo "libqxcb.so missing in extracted AppImage"; exit 1; }
+          export LD_LIBRARY_PATH="$PWD/squashfs-root/usr/lib:$PWD/squashfs-root/usr/bin/_internal:$PWD/squashfs-root/usr/bin/_internal/PySide6/Qt/lib"
+          MISSING_EXTRACTED=$(ldd squashfs-root/usr/bin/_internal/PySide6/Qt/plugins/platforms/libqxcb.so | grep "not found" || true)
+          if [ -n "$MISSING_EXTRACTED" ]; then
+            echo "Unresolved dependencies in extracted libqxcb.so:"
+            echo "$MISSING_EXTRACTED"
+            exit 1
+          fi
+          rm -rf squashfs-root
+
+      - name: Test AppImage in clean isolated container
+        run: |
+          docker run --rm \
+            -v "$PWD/dist:/dist:ro" \
+            ubuntu:22.04 \
+            /bin/bash -c '
+              set -e
+              apt-get update -qq
+              DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends xvfb libgl1 libegl1 libx11-6 libx11-xcb1 libfontconfig1
+              dpkg -l | grep -i xcb-cursor && exit 1 || true
+              /dist/YoutubeGo-x86_64.AppImage --appimage-extract
+              cd squashfs-root
+              export DISPLAY=:99
+              Xvfb :99 -screen 0 1024x768x24 &
+              XVFB_PID=$!
+              sleep 2
+              export QT_DEBUG_PLUGINS=1
+              APP_EXIT=0
+              timeout 8s ./AppRun || APP_EXIT=$?
+              kill $XVFB_PID || true
+              if [ $APP_EXIT -ne 124 ] && [ $APP_EXIT -ne 0 ]; then
+                echo "App failed in clean container with exit status $APP_EXIT"
+                exit 1
+              fi
+              echo "Clean environment launch test passed"
+            '
 
       - name: Upload to GitHub Releases
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: 'dist/YoutubeGo-x86_64.AppImage'
         env:

@@ -1,4 +1,4 @@
-VERSION = "v5.0.26"
+VERSION = "v5.0.27"
 VERSION_SHORT = "v5.0"
 
 def get_version(short=False):

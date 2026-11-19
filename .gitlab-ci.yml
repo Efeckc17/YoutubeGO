@@ -1,0 +1,113 @@
+stages: [test, build, release]
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH == "main"'
+
+windows_tests:
+  stage: test
+  tags: [saas-windows-medium-amd64]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main" || $CI_PIPELINE_SOURCE == "merge_request_event"'
+  script:
+    - '& powershell -NoProfile -ExecutionPolicy Bypass -File ci/windows.ps1 test'
+
+windows_exe_smoke:
+  stage: test
+  tags: [saas-windows-medium-amd64]
+  rules:
+    - if: '$CI_COMMIT_BRANCH == "main"'
+  script:
+    - '& powershell -NoProfile -ExecutionPolicy Bypass -File ci/smoke-windows.ps1'
+
+windows_exe:
+  stage: build
+  tags: [saas-windows-medium-amd64]
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+  script:
+    - '& powershell -NoProfile -ExecutionPolicy Bypass -File ci/windows.ps1 exe'
+    - '"WINDOWS_EXE_JOB_ID=$env:CI_JOB_ID" | Set-Content -Encoding ascii windows-exe.env'
+  artifacts:
+    reports:
+      dotenv: windows-exe.env
+    name: 'YoutubeGo-Windows-$CI_COMMIT_TAG'
+    paths: [dist/YoutubeGo.exe]
+    expire_in: 90 days
+
+windows_portable:
+  stage: build
+  tags: [saas-windows-medium-amd64]
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+  script:
+    - '& powershell -NoProfile -ExecutionPolicy Bypass -File ci/windows.ps1 portable'
+    - '"WINDOWS_PORTABLE_JOB_ID=$env:CI_JOB_ID" | Set-Content -Encoding ascii windows-portable.env'
+  artifacts:
+    reports:
+      dotenv: windows-portable.env
+    name: 'YoutubeGo-Portable-$CI_COMMIT_TAG'
+    paths: [YoutubeGo-Win.zip]
+    expire_in: 90 days
+
+linux_appimage:
+  stage: build
+  image: python:3.13-bookworm
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+  script:
+    - bash ci/linux.sh
+    - echo "LINUX_JOB_ID=$CI_JOB_ID" > linux.env
+  artifacts:
+    reports:
+      dotenv: linux.env
+    name: 'YoutubeGo-Linux-$CI_COMMIT_TAG'
+    paths: [dist/YoutubeGo-x86_64.AppImage]
+    expire_in: 90 days
+
+# GitLab Free does not include hosted macOS runners; opt in when eligible.
+macos_dmg:
+  stage: build
+  tags: [saas-macos-medium-m1]
+  image: macos-26-xcode-26
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/ && $ENABLE_MACOS == "true"'
+  script:
+    - bash ci/macos.sh
+  artifacts:
+    name: 'YoutubeGo-macOS-$CI_COMMIT_TAG'
+    paths: [dist/YoutubeGo.dmg]
+    expire_in: 90 days
+
+# Publish a real GitLab Release only after all required builds succeed.
+release_gitlab:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/cli:latest
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v/'
+  needs:
+    - job: windows_exe
+      artifacts: true
+    - job: windows_portable
+      artifacts: true
+    - job: linux_appimage
+      artifacts: true
+  script:
+    - echo "Publishing GitLab release $CI_COMMIT_TAG after all three builds succeed"
+  release:
+    tag_name: '$CI_COMMIT_TAG'
+    name: 'YouTubeGO $CI_COMMIT_TAG'
+    description: 'YouTubeGO $CI_COMMIT_TAG builds for Windows and Linux. Artifacts are retained for 90 days.'
+    assets:
+      links:
+        - name: 'Windows EXE'
+          url: '$CI_PROJECT_URL/-/jobs/$WINDOWS_EXE_JOB_ID/artifacts/raw/dist/YoutubeGo.exe'
+          link_type: package
+        - name: 'Windows Portable ZIP'
+          url: '$CI_PROJECT_URL/-/jobs/$WINDOWS_PORTABLE_JOB_ID/artifacts/raw/YoutubeGo-Win.zip'
+          link_type: package
+        - name: 'Linux AppImage'
+          url: '$CI_PROJECT_URL/-/jobs/$LINUX_JOB_ID/artifacts/raw/dist/YoutubeGo-x86_64.AppImage'
+          link_type: package

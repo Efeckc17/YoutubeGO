@@ -7,6 +7,7 @@ import webbrowser
 from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import QMessageBox, QLabel
 from core.version import VERSION, get_version
+from relay.gitlab_relay import GitLabRelay
 
 class UpdateChecker(QObject):
     update_available = Signal(str, str)
@@ -17,6 +18,7 @@ class UpdateChecker(QObject):
         super().__init__()
         self.current_version = VERSION
         self.github_api_url = "https://api.github.com/repos/Efeckc17/YouTubeGO/releases/latest"
+        self.gitlab_relay = GitLabRelay()
         self.headers = {
             "User-Agent": f"YouTubeGO/{VERSION} ({platform.system()} {platform.release()})",
             "Accept": "application/vnd.github.v3+json"
@@ -24,22 +26,34 @@ class UpdateChecker(QObject):
 
     def check_for_updates(self):
         try:
-            response = requests.get(self.github_api_url, headers=self.headers, timeout=10)
-            if response.status_code == 200:
-                release_data = response.json()
-                latest_version = release_data["tag_name"]
-                html_url = release_data["html_url"]
-                if self._compare_versions(latest_version, self.current_version) > 0:
-                    self.update_available.emit(latest_version, html_url)
-                    self.version_status.emit(f"Update to {latest_version} available", "update-available")
-                else:
-                    self.version_status.emit("Up to date", "up-to-date")
-            else:
-                self.update_error.emit(f"Failed to check for updates: {response.status_code}")
+            latest_version, html_url = self._fetch_from_github()
+        except Exception as github_error:
+            try:
+                release_info = self.gitlab_relay.fetch_latest_release(
+                    headers={"User-Agent": self.headers["User-Agent"]}
+                )
+                latest_version, html_url = release_info.version, release_info.url
+            except Exception as gitlab_error:
+                self.update_error.emit(
+                    f"Error checking for updates (GitHub: {github_error}; GitLab: {gitlab_error})"
+                )
                 self.version_status.emit("Update check failed", "error")
-        except (requests.RequestException, requests.Timeout, ConnectionError, json.JSONDecodeError) as e:
-            self.update_error.emit(f"Error checking for updates: {str(e)}")
-            self.version_status.emit("Update check failed", "error")
+                return
+
+        if self._compare_versions(latest_version, self.current_version) > 0:
+            self.update_available.emit(latest_version, html_url)
+            self.version_status.emit(f"Update to {latest_version} available", "update-available")
+        else:
+            self.version_status.emit("Up to date", "up-to-date")
+
+    def _fetch_from_github(self):
+        response = requests.get(self.github_api_url, headers=self.headers, timeout=10)
+        if response.status_code != 200:
+            raise RuntimeError(f"HTTP {response.status_code}")
+        release_data = response.json()
+        latest_version = release_data["tag_name"]
+        html_url = release_data["html_url"]
+        return latest_version, html_url
 
     def _compare_versions(self, version1, version2):
         v1_parts = [int(x) for x in version1.lstrip('v').split('.')]
@@ -65,10 +79,11 @@ class UpdateManager:
         self.checker.check_for_updates()
 
     def _handle_update_available(self, version, html_url):
+        source = "GitLab" if "gitlab.com" in html_url else "GitHub"
         reply = QMessageBox.question(
             self.parent,
             "Update Available",
-            f"A new version ({version}) is available. Would you like to download it from GitHub?",
+            f"A new version ({version}) is available. Would you like to download it from {source}?",
             QMessageBox.Yes | QMessageBox.No
         )
         if reply == QMessageBox.Yes:

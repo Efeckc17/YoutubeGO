@@ -6,6 +6,7 @@ import subprocess
 import time
 import yt_dlp
 from yt_dlp.postprocessor.ffmpeg import FFmpegPostProcessor
+from yt_dlp.utils import detect_exe_version
 from PySide6.QtCore import QRunnable
 from core.utils import format_speed, format_time, get_data_dir, restore_linux_ld_library_path
 
@@ -227,30 +228,52 @@ class DownloadQueueWorker(QRunnable):
 
         return download_options
 
+    def _prime_system_ffmpeg_versions(self, ffmpeg_path):
+        """Probe external system FFmpeg before yt-dlp creates its postprocessors.
+
+        In frozen AppImages yt-dlp's own subprocess wrapper can fail to read
+        executable versions even though Python subprocess can execute them.
+        Its version cache is shared and is consulted by the merger.
+        """
+        if not ffmpeg_path:
+            return
+        directory = os.path.dirname(os.path.abspath(ffmpeg_path))
+        for name in ("ffmpeg", "ffprobe"):
+            path = ffmpeg_path if name == "ffmpeg" else os.path.join(directory, "ffprobe")
+            if not os.path.isfile(path) or not os.access(path, os.X_OK):
+                continue
+            try:
+                result = subprocess.run(
+                    [path, "-bsfs"], stdout=subprocess.PIPE,
+                    stderr=subprocess.STDOUT, text=True, timeout=8,
+                )
+                version = detect_exe_version(result.stdout) if result.returncode == 0 else None
+                if version:
+                    FFmpegPostProcessor._version_cache[path] = version
+                    self.log_signal.emit(f"System {name} verified: {version} ({path})")
+                else:
+                    FFmpegPostProcessor._version_cache.pop(path, None)
+                    self.log_signal.emit(
+                        f"WARNING: {name} version probe failed: rc={result.returncode} "
+                        f"output={result.stdout[:250]!r}"
+                    )
+            except (OSError, subprocess.TimeoutExpired) as exc:
+                FFmpegPostProcessor._version_cache.pop(path, None)
+                self.log_signal.emit(f"WARNING: {name} probe failed: {exc}")
+
     def _verify_ffmpeg_for_ydl(self, ydl, ffmpeg_path):
         if not ffmpeg_path:
             self.log_signal.emit("WARNING: FFmpeg not found!")
             return
-
-        self.log_signal.emit(f"FFmpeg detected: {ffmpeg_path}")
-        FFmpegPostProcessor._version_cache.pop(ffmpeg_path, None)
-        versions = FFmpegPostProcessor.get_versions(ydl)
-        if versions.get("ffmpeg"):
-            return
-
-        try:
-            probe = subprocess.run(
-                [ffmpeg_path, "-bsfs"],
-                capture_output=True,
-                text=True,
-                timeout=5,
+        pp = FFmpegPostProcessor(ydl)
+        self.log_signal.emit(
+            f"FFmpeg detected: {ffmpeg_path}; "
+            f"yt-dlp available={pp.available}; versions={pp._versions}"
+        )
+        if not pp.available:
+            raise yt_dlp.utils.DownloadError(
+                "System FFmpeg works but yt-dlp cannot detect it; see diagnostic log"
             )
-            self.log_signal.emit(
-                f"FFmpeg probe rc={probe.returncode} err={probe.stderr.strip()[:200]} "
-                f"LD_LIBRARY_PATH={os.environ.get('LD_LIBRARY_PATH', '')}"
-            )
-        except Exception as probe_err:
-            self.log_signal.emit(f"FFmpeg probe exception: {probe_err}")
 
     def run(self):
         try:
@@ -294,6 +317,7 @@ class DownloadQueueWorker(QRunnable):
 
             download_options = self._build_download_options()
             ffmpeg_path = download_options.get("ffmpeg_location")
+            self._prime_system_ffmpeg_versions(ffmpeg_path)
 
             try:
                 with yt_dlp.YoutubeDL(download_options) as ydl:

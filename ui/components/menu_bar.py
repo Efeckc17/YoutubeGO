@@ -98,7 +98,7 @@ class MenuBarManager:
 
     def open_support_page(self):
         try:
-            webbrowser.open("https://buymeacoffee.com/toxi360")
+            webbrowser.open("https://paycow.net/donate/youtubego")
         except (OSError, webbrowser.Error) as e:
             QMessageBox.warning(self.main_window, "Error", f"Could not open support page: {str(e)}")
 

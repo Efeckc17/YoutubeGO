@@ -7,6 +7,7 @@ from PySide6.QtCore import QSharedMemory, QSystemSemaphore, Qt
 from PySide6.QtGui import QIcon
 from ui.main_window import MainWindow
 from core.ffmpeg_checker import check_ffmpeg
+from core.utils import restore_linux_ld_library_path
 from core.version import get_version
 
 def resource_path(relative_path):
@@ -41,27 +42,6 @@ def create_shared_memory():
         semaphore = QSystemSemaphore(f"YoutubeGO_Semaphore_{get_version(short=True)}", 1)
         return shared_mem, semaphore
     return None, None
-
-def restore_linux_ld_library_path():
-    """ """
-    if not sys.platform.startswith("linux") or not getattr(sys, "frozen", False):
-        return
-    if "LD_LIBRARY_PATH_ORIG" in os.environ:
-        orig = os.environ["LD_LIBRARY_PATH_ORIG"]
-        if orig:
-            os.environ["LD_LIBRARY_PATH"] = orig
-        else:
-            os.environ.pop("LD_LIBRARY_PATH", None)
-        return
-    meipass = getattr(sys, "_MEIPASS", None)
-    ld_path = os.environ.get("LD_LIBRARY_PATH")
-    if meipass and ld_path:
-        filtered = [p for p in ld_path.split(os.pathsep) if p and os.path.normpath(p) != os.path.normpath(meipass)]
-        if filtered:
-            os.environ["LD_LIBRARY_PATH"] = os.pathsep.join(filtered)
-        else:
-            os.environ.pop("LD_LIBRARY_PATH", None)
-
 
 def main():
     set_platform_specific_settings()

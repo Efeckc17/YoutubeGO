@@ -73,3 +73,36 @@ def get_data_dir():
 def get_images_dir():
     
     return os.path.join(get_data_dir(), 'images')
+
+
+def restore_linux_ld_library_path():
+    """Restore LD_LIBRARY_PATH when running frozen on Linux so external tools like ffmpeg don't load bundled libs."""
+    if not sys.platform.startswith("linux") or not getattr(sys, "frozen", False):
+        return
+    if "LD_LIBRARY_PATH_ORIG" in os.environ:
+        ld_source = os.environ["LD_LIBRARY_PATH_ORIG"]
+    else:
+        ld_source = os.environ.get("LD_LIBRARY_PATH", "")
+
+    if not ld_source:
+        os.environ.pop("LD_LIBRARY_PATH", None)
+        return
+
+    blocked_prefixes = []
+    for raw in (getattr(sys, "_MEIPASS", None), os.environ.get("APPDIR")):
+        if raw:
+            blocked_prefixes.append(os.path.normpath(raw))
+
+    filtered = []
+    for entry in ld_source.split(os.pathsep):
+        if not entry:
+            continue
+        norm = os.path.normpath(entry)
+        if any(norm == p or norm.startswith(p + os.sep) for p in blocked_prefixes):
+            continue
+        filtered.append(entry)
+
+    if filtered:
+        os.environ["LD_LIBRARY_PATH"] = os.pathsep.join(filtered)
+    else:
+        os.environ.pop("LD_LIBRARY_PATH", None)

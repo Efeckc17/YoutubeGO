@@ -227,6 +227,8 @@ class MainWindow(QMainWindow):
         task = DownloadTask(link, self.user_profile.get_default_resolution(), download_path, self.user_profile.get_proxy(), audio_only=audio, playlist=playlist, audio_format=self.user_profile.get_audio_format() if audio else None, audio_quality=self.user_profile.get_audio_quality() if audio else "320", from_queue=False)
         self.run_task(task, None)
     def run_task(self, task, row):
+        if not getattr(task, "ffmpeg_path", None) and getattr(self, "ffmpeg_path", None):
+            task.ffmpeg_path = self.ffmpeg_path
         if task.playlist:
             self.tray_manager.show_playlist_indexing_message()
             self.update_status(row, "Indexing Playlist...")

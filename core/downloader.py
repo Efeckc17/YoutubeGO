@@ -39,7 +39,7 @@ class YTLogger:
         self._temp_files.clear()
 
 class DownloadTask:
-    def __init__(self, url, resolution, folder, proxy, audio_only=False, playlist=False, subtitles=False, output_format="mp4", from_queue=False, audio_format=None, audio_quality="320"):
+    def __init__(self, url, resolution, folder, proxy, audio_only=False, playlist=False, subtitles=False, output_format="mp4", from_queue=False, audio_format=None, audio_quality="320", ffmpeg_path=None):
         self.url = url
         self.resolution = resolution
         self.folder = folder
@@ -51,6 +51,7 @@ class DownloadTask:
         self.from_queue = from_queue
         self.audio_format = audio_format
         self.audio_quality = audio_quality
+        self.ffmpeg_path = ffmpeg_path
 
 class DownloadQueueWorker(QRunnable):
     def __init__(self, task, row, progress_signal, status_signal, log_signal, info_signal=None, user_profile=None):
@@ -107,6 +108,9 @@ class DownloadQueueWorker(QRunnable):
         if use_geo_bypass:
             options["geo_bypass"] = True
             options["geo_bypass_country"] = geo_country
+
+        if getattr(self.task, "ffmpeg_path", None):
+            options["ffmpeg_location"] = self.task.ffmpeg_path
         
         return options
 

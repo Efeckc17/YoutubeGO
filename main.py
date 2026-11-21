@@ -42,6 +42,27 @@ def create_shared_memory():
         return shared_mem, semaphore
     return None, None
 
+def restore_linux_ld_library_path():
+    """ """
+    if not sys.platform.startswith("linux") or not getattr(sys, "frozen", False):
+        return
+    if "LD_LIBRARY_PATH_ORIG" in os.environ:
+        orig = os.environ["LD_LIBRARY_PATH_ORIG"]
+        if orig:
+            os.environ["LD_LIBRARY_PATH"] = orig
+        else:
+            os.environ.pop("LD_LIBRARY_PATH", None)
+        return
+    meipass = getattr(sys, "_MEIPASS", None)
+    ld_path = os.environ.get("LD_LIBRARY_PATH")
+    if meipass and ld_path:
+        filtered = [p for p in ld_path.split(os.pathsep) if p and os.path.normpath(p) != os.path.normpath(meipass)]
+        if filtered:
+            os.environ["LD_LIBRARY_PATH"] = os.pathsep.join(filtered)
+        else:
+            os.environ.pop("LD_LIBRARY_PATH", None)
+
+
 def main():
     set_platform_specific_settings()
     
@@ -67,6 +88,7 @@ def main():
             return
     
     app = QApplication(sys.argv)
+    restore_linux_ld_library_path()
     
     icon_path = resource_path(os.path.join("assets", "app.ico"))
     if os.path.exists(icon_path):

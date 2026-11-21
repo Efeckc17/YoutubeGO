@@ -33,6 +33,10 @@ class ThemeManager:
 
     def apply_current_theme(self):
         self.main_window.setStyleSheet(self.get_current_theme_stylesheet())
+        if hasattr(self.main_window, "side_menu_layout"):
+            self.main_window.side_menu_layout.update_icons()
+        if hasattr(self.main_window, "page_home") and hasattr(self.main_window.page_home, "refresh_dashboard"):
+            self.main_window.page_home.refresh_dashboard()
 
     def change_theme(self, theme):
         self.user_profile.set_theme(theme)

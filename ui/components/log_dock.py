@@ -33,7 +33,7 @@ class LogDockManager:
 
         def format_error_text(msg):
             timestamp = get_timestamp()
-            return f"[{timestamp}] ❌ {msg}"
+            return f"[{timestamp}] [ERROR] {msg}"
 
         color = "white"
         
@@ -47,7 +47,7 @@ class LogDockManager:
                     color = "#4D96FF"
             elif "[yt-dlp Warning]" in text:
                 color = "#FFD93D"
-                text = f"⚠️ {text}"
+                text = f"[WARN] {text}"
             elif "[yt-dlp Error]" in text:
                 color = "#FF4444"
                 text = format_error_text(text)
@@ -57,16 +57,16 @@ class LogDockManager:
                 text = format_error_text(text)
             elif any(k in text.lower() for k in ["warning", "warn"]):
                 color = "#FFD93D"
-                text = f"⚠️ {text}"
+                text = f"[WARN] {text}"
             elif any(k in text.lower() for k in ["completed", "success", "finished"]):
                 color = "#6BCB77"
-                text = f"✅ {text}"
+                text = f"[OK] {text}"
             elif any(k in text.lower() for k in ["started", "queued", "fetching", "downloading"]):
                 color = "#4D96FF"
-                text = f"ℹ️ {text}"
+                text = f"[INFO] {text}"
             elif "cancel" in text.lower():
                 color = "#FF9F45"
-                text = f"🚫 {text}"
+                text = f"[CANCELLED] {text}"
 
         if "error details:" in text.lower():
             lines = text.split("\n")

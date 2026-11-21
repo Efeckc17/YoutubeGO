@@ -259,7 +259,7 @@ class SettingsPage(QWidget):
         if not os.path.exists(current_path):
             self.download_path_edit.setStyleSheet("QLineEdit { color: #ff4444; font-weight: bold; }")
             self.download_path_edit.setToolTip(
-                "⚠️ WARNING: Path does not exist!\n\n"
+                "WARNING: Path does not exist!\n\n"
                 f"Current path: {current_path}\n\n"
                 "This folder may have been deleted or the drive may be disconnected.\n"
                 "Please select a new download location by clicking Browse."
@@ -294,7 +294,7 @@ class SettingsPage(QWidget):
         self.ffmpeg_status_label.setAlignment(Qt.AlignCenter)
         
         if self.parent.ffmpeg_found:
-            self.ffmpeg_status_label.setText("✓ FFmpeg Ready")
+            self.ffmpeg_status_label.setText("FFmpeg Ready")
             self.ffmpeg_status_label.setStyleSheet("""
                 QLabel {
                     color: #fff;
@@ -319,7 +319,7 @@ class SettingsPage(QWidget):
             )
             
         else:
-            self.ffmpeg_status_label.setText("⚠️ FFmpeg Required")
+            self.ffmpeg_status_label.setText("FFmpeg Required")
             self.ffmpeg_status_label.setStyleSheet("""
                 QLabel {
                     color: #fff;
@@ -485,13 +485,13 @@ class SettingsPage(QWidget):
         if not os.path.exists(current_path):
             self.download_path_edit.setStyleSheet("QLineEdit { color: #ff4444; font-weight: bold; }")
             self.download_path_edit.setToolTip(
-                "⚠️ WARNING: Path does not exist!\n\n"
+                "WARNING: Path does not exist!\n\n"
                 f"Current path: {current_path}\n\n"
                 "This folder may have been deleted or the drive may be disconnected.\n"
                 "Please select a new download location by clicking Browse."
             )
             QMessageBox.warning(self, "Invalid Download Path",
-                f"⚠️ Download folder does not exist:\n{current_path}\n\n"
+                f"Download folder does not exist:\n{current_path}\n\n"
                 "Possible causes:\n"
                 "• External drive (USB/SD card) was removed\n"
                 "• Network drive disconnected\n"

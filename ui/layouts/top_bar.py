@@ -1,8 +1,9 @@
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel,
                             QLineEdit, QListWidget)
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QFont, QIcon
 from ui.components.animated_button import AnimatedButton
+from ui.components.icons import get_icon
 from core.utils import set_circular_pixmap
 from core.version import get_version
 
@@ -22,7 +23,17 @@ class TopBarLayout:
         profile_container = QVBoxLayout()
         self.profile_pic_label = QLabel()
         self.profile_pic_label.setFixedSize(50, 50)
-        set_circular_pixmap(self.profile_pic_label, self.parent.user_profile.data["profile_picture"])
+        self.profile_pic_label.setAlignment(Qt.AlignCenter)
+        pic_path = self.parent.user_profile.data["profile_picture"]
+        if pic_path:
+            set_circular_pixmap(self.profile_pic_label, pic_path)
+        else:
+            self.profile_pic_label.setPixmap(
+                get_icon("Profile", color="#94a3b8", selected_color="#94a3b8", size=26).pixmap(26, 26)
+            )
+            self.profile_pic_label.setStyleSheet(
+                "border: 1px solid rgba(148, 163, 184, 0.35); border-radius: 25px; background-color: rgba(148, 163, 184, 0.08);"
+            )
         
         self.profile_name_label = QLabel(self.parent.user_profile.data["name"] if self.parent.user_profile.data["name"] else "User")
         self.profile_name_label.setFont(QFont("Arial", 10))
@@ -57,6 +68,8 @@ class TopBarLayout:
         self.search_edit.setPlaceholderText("Search in app...")
         self.search_edit.setFixedHeight(40)
         self.search_btn = AnimatedButton("Search")
+        self.search_btn.setIcon(get_icon("Search", color="#ffffff", selected_color="#ffffff", size=16))
+        self.search_btn.setIconSize(QSize(16, 16))
         self.search_btn.setFixedHeight(40)
         search_bar_row_layout.addWidget(self.search_edit)
         search_bar_row_layout.addWidget(self.search_btn)

@@ -1,6 +1,6 @@
 from PySide6.QtWidgets import QSystemTrayIcon, QMenu, QApplication
-from PySide6.QtGui import QIcon, QPixmap, QPainter, QFont, QAction
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon, QPixmap, QPainter, QAction, QColor, QPolygon
+from PySide6.QtCore import Qt, Signal, QPoint
 import os
 from core.version import get_version
 
@@ -18,10 +18,10 @@ class TrayIconManager:
             pixmap = QPixmap(64, 64)
             pixmap.fill(Qt.transparent)
             p = QPainter(pixmap)
-            f = QFont()
-            f.setPointSize(32)
-            p.setFont(f)
-            p.drawText(pixmap.rect(), Qt.AlignCenter, "▶️")
+            p.setRenderHint(QPainter.Antialiasing)
+            p.setBrush(QColor("#ff4444"))
+            p.setPen(Qt.NoPen)
+            p.drawPolygon(QPolygon([QPoint(20, 14), QPoint(50, 32), QPoint(20, 50)]))
             p.end()
             icon = QIcon(pixmap)
 

@@ -256,7 +256,7 @@ class MainWindow(QMainWindow):
         
         if "Download Completed" in st:
             self.progress_bar.setVisible(True)
-            self.progress_bar.setFormat("Download Completed ✓")
+            self.progress_bar.setFormat("Download Completed")
             self.progress_bar.setValue(100)
             QTimer.singleShot(3000, lambda: (
                 self.progress_bar.setVisible(False),
@@ -265,7 +265,7 @@ class MainWindow(QMainWindow):
             ))
         elif "Download Error" in st:
             self.progress_bar.setVisible(True)
-            self.progress_bar.setFormat("Download Failed ✗")
+            self.progress_bar.setFormat("Download Failed")
             self.progress_bar.setValue(0)
             QTimer.singleShot(3000, lambda: (
                 self.progress_bar.setVisible(False),

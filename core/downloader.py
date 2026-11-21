@@ -4,11 +4,60 @@ import json
 import shutil
 import subprocess
 import time
+import sys
 import yt_dlp
+import yt_dlp.postprocessor.ffmpeg as ffmpeg_module
 from yt_dlp.postprocessor.ffmpeg import FFmpegPostProcessor
 from yt_dlp.utils import detect_exe_version
 from PySide6.QtCore import QRunnable
 from core.utils import format_speed, format_time, get_data_dir, restore_linux_ld_library_path
+
+
+
+def _system_ffmpeg_env():
+    
+    env = os.environ.copy()
+    if not (sys.platform.startswith("linux") and getattr(sys, "frozen", False)):
+        return env
+
+    roots = [os.path.realpath(p) for p in (
+        getattr(sys, "_MEIPASS", None), env.get("APPDIR"),
+    ) if p]
+
+    def is_bundled(path):
+        resolved = os.path.realpath(path)
+        return any(resolved == root or resolved.startswith(root + os.sep) for root in roots)
+
+    
+    for key in ("LD_LIBRARY_PATH", "LD_LIBRARY_PATH_ORIG"):
+        value = env.get(key, "")
+        paths = [p for p in value.split(os.pathsep) if p and not is_bundled(p)]
+        if paths:
+            env[key] = os.pathsep.join(paths)
+        else:
+            env.pop(key, None)
+    for key in ("LD_PRELOAD", "LD_AUDIT"):
+        value = env.get(key, "")
+        paths = [p for p in value.split() if not is_bundled(p)]
+        if paths:
+            env[key] = " ".join(paths)
+        else:
+            env.pop(key, None)
+    return env
+
+
+class _SystemFFmpegPopen(ffmpeg_module.Popen):
+    
+
+    def __init__(self, args, *remaining, **kwargs):
+        if sys.platform.startswith("linux") and getattr(sys, "frozen", False):
+            kwargs["env"] = _system_ffmpeg_env()
+        super().__init__(args, *remaining, **kwargs)
+
+
+
+if sys.platform.startswith("linux") and getattr(sys, "frozen", False):
+    ffmpeg_module.Popen = _SystemFFmpegPopen
 
 
 class YTLogger:
@@ -246,6 +295,7 @@ class DownloadQueueWorker(QRunnable):
                 result = subprocess.run(
                     [path, "-bsfs"], stdout=subprocess.PIPE,
                     stderr=subprocess.STDOUT, text=True, timeout=8,
+                    env=_system_ffmpeg_env(),
                 )
                 version = detect_exe_version(result.stdout) if result.returncode == 0 else None
                 if version:

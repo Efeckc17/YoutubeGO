@@ -84,6 +84,14 @@ class MenuBarManager:
         help_menu.addAction(report_bug_action)
         help_menu.addAction(support_dev_action)
 
+        rate_action = QAction("Rate our app!", self.main_window)
+        rate_action.triggered.connect(self.open_rate_page)
+        self.menu_bar.addAction(rate_action)
+
+        story_action = QAction("How YoutubeGO Was Born", self.main_window)
+        story_action.triggered.connect(self.show_story_dialog)
+        self.menu_bar.addAction(story_action)
+
     def show_contact_info(self):
         QMessageBox.information(self.main_window, "Contact", "For support: toxi360@workmail.com")
 
@@ -101,6 +109,26 @@ class MenuBarManager:
             webbrowser.open("https://paycow.net/donate/youtubego")
         except (OSError, webbrowser.Error) as e:
             QMessageBox.warning(self.main_window, "Error", f"Could not open support page: {str(e)}")
+
+    def open_rate_page(self):
+        try:
+            webbrowser.open("https://youtubego.org/")
+        except (OSError, webbrowser.Error) as e:
+            QMessageBox.warning(self.main_window, "Error", f"Could not open website: {str(e)}")
+
+    def show_story_dialog(self):
+        content = """
+        <div style="font-family: 'Inter', 'Segoe UI', sans-serif; line-height: 1.6; padding: 12px;">
+            <h2 style="color: #ff4444; margin-top: 0;">How YoutubeGO Was Born</h2>
+            <p>Hi, I'm <b>Mehmet Efe</b>. I started this project on my own when I was 16 years old.</p>
+            <p>My only goal was to build a clean downloader free of viruses—almost every tool showing up on Google at the time was packed with malware or adware, so I decided to create my own.</p>
+            <p>What began as a simple MP3 downloader has grown into the application you see today.</p>
+            <p><b>Enjoy using it!</b></p>
+        </div>
+        """
+        dialog = LicenseDialog("How YoutubeGO Was Born", content, self.main_window)
+        dialog.setMinimumSize(480, 280)
+        dialog.exec()
 
     def show_youtubego_license(self):
         github_license_url = "https://raw.githubusercontent.com/Efeckc17/YoutubeGO/main/LICENSE"
